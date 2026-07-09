@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw, Rocket, FileCode2, Play, Loader2, ArrowLeft } from "lucide-react";
 import { usePatchPilot } from "@/lib/store";
+import { toast } from "@/lib/toast";
 import type { EngineeringBrief, RiskLevel } from "@/lib/types";
 import Card from "@/components/Card";
 import Badge from "@/components/Badge";
@@ -84,6 +85,7 @@ export default function BriefPage() {
   async function dispatchDemo() {
     setDispatching("demo");
     await usePatchPilot.getState().persist("running");
+    toast.info("Simulated run started", "Watching the agent pipeline.");
     router.push("/run");
   }
 
@@ -99,9 +101,10 @@ export default function BriefPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.agentId) {
-        setDispatchError(
-          data?.error || "Could not reach the Cursor agent. Try the simulated run."
-        );
+        const msg =
+          data?.error || "Could not reach the Cursor agent. Try the simulated run.";
+        setDispatchError(msg);
+        toast.error("Dispatch failed", msg);
         setDispatching("none");
         return;
       }
@@ -112,6 +115,7 @@ export default function BriefPage() {
         branch: data.branch
       });
       await usePatchPilot.getState().persist("running");
+      toast.success("Dispatched to Cursor", "A real cloud agent is on the case.");
       router.push("/run");
     } catch {
       setDispatchError("Network error contacting the agent. Try the simulated run.");

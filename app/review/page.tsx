@@ -15,9 +15,12 @@ import {
   Cpu
 } from "lucide-react";
 import { usePatchPilot } from "@/lib/store";
+import { toast } from "@/lib/toast";
 import Card from "@/components/Card";
 import Badge from "@/components/Badge";
 import BottomBar from "@/components/BottomBar";
+import SafetyGate from "@/components/SafetyGate";
+import Confetti from "@/components/Confetti";
 
 export default function ReviewPage() {
   const router = useRouter();
@@ -50,17 +53,24 @@ export default function ReviewPage() {
   async function handleDecision(decision: "approved" | "changes-requested") {
     setDecision(decision);
     await usePatchPilot.getState().persist();
+    if (decision === "approved") {
+      toast.success("Approved", "Safety gate cleared — ready to merge.");
+    } else {
+      toast.info("Changes requested", "Merge is blocked until resolved.");
+    }
   }
 
   async function handleMerge() {
     mergeRun();
     await usePatchPilot.getState().persist("merged");
+    toast.success("Patch merged", "The reviewed patch is on its way.");
   }
 
   if (merged) {
     return (
       <div className="mx-auto max-w-2xl animate-slideUp">
         <div className="relative overflow-hidden rounded-3xl border border-emerald-200 bg-white p-10 text-center shadow-card">
+          <Confetti />
           <div className="pointer-events-none absolute -top-16 left-1/2 h-48 w-48 -translate-x-1/2 rounded-full bg-emerald-300/25 blur-3xl" />
           <div className="relative flex flex-col items-center gap-4">
             <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-[0_10px_30px_-8px_rgba(16,185,129,0.6)]">
@@ -124,6 +134,12 @@ export default function ReviewPage() {
           {review.decision === "pending" ? "not reviewed" : review.decision}
         </Badge>
       </div>
+
+      <SafetyGate
+        checklist={review.checklist}
+        decision={review.decision}
+        risk={brief.risk}
+      />
 
       <Card title="Change summary" icon={<GitPullRequest size={13} />}>
         <p className="text-[15px] font-semibold text-ink-900">{brief.title}</p>

@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { Sparkles, Wand2 } from "lucide-react";
 import { usePatchPilot } from "@/lib/store";
 import { synthesizeBrief } from "@/lib/synthesizeBrief";
+import { toast } from "@/lib/toast";
 import type { AppArea, Severity } from "@/lib/types";
 import Card from "@/components/Card";
 import BottomBar from "@/components/BottomBar";
@@ -61,6 +62,7 @@ export default function IntakePage() {
     if (!canSubmit) return;
     setBrief(synthesizeBrief(issue));
     await usePatchPilot.getState().persist("briefed");
+    toast.success("Engineering brief drafted", "Review and edit before dispatch.");
     router.push("/brief");
   }
 

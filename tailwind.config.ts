@@ -86,6 +86,21 @@ const config: Config = {
         caret: {
           "0%,49%": { opacity: "1" },
           "50%,100%": { opacity: "0" }
+        },
+        toastIn: {
+          "0%": { transform: "translateY(12px) scale(0.98)", opacity: "0" },
+          "100%": { transform: "translateY(0) scale(1)", opacity: "1" }
+        },
+        gatePop: {
+          "0%": { transform: "scale(0.85)", opacity: "0.4" },
+          "60%": { transform: "scale(1.06)", opacity: "1" },
+          "100%": { transform: "scale(1)", opacity: "1" }
+        },
+        railTravel: {
+          "0%": { left: "0%", opacity: "0" },
+          "10%": { opacity: "1" },
+          "90%": { opacity: "1" },
+          "100%": { left: "100%", opacity: "0" }
         }
       },
       animation: {
@@ -93,7 +108,10 @@ const config: Config = {
         slideUp: "slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both",
         fadeIn: "fadeIn 0.4s ease-out both",
         shimmer: "shimmer 1.6s infinite",
-        caret: "caret 1.1s step-end infinite"
+        caret: "caret 1.1s step-end infinite",
+        toastIn: "toastIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both",
+        gatePop: "gatePop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both",
+        railTravel: "railTravel 3.4s cubic-bezier(0.65, 0, 0.35, 1) infinite"
       }
     }
   },

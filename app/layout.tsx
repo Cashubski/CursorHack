@@ -4,6 +4,8 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 import TopNav from "@/components/TopNav";
 import Stepper from "@/components/Stepper";
+import Toaster from "@/components/Toaster";
+import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 
 export const metadata: Metadata = {
   title: "PatchPilot - Bug reports to reviewed patches",
@@ -33,10 +35,18 @@ export default function RootLayout({
         </main>
         <footer className="mx-auto w-full max-w-6xl px-4 pb-10 pt-4 sm:px-6">
           <div className="flex flex-col items-center justify-between gap-2 border-t border-ink-200/70 pt-6 text-xs text-ink-400 sm:flex-row">
-            <p>PatchPilot — from bug report to reviewed patch.</p>
-            <p className="font-mono">Built for CursorHack</p>
+            <p>PatchPilot — the human-in-the-loop control plane for coding agents.</p>
+            <p className="flex items-center gap-1.5">
+              Press
+              <kbd className="rounded border border-ink-200 bg-white px-1.5 py-0.5 font-mono text-[10px] font-semibold text-ink-500 shadow-card">
+                N
+              </kbd>
+              for a new report
+            </p>
           </div>
         </footer>
+        <Toaster />
+        <KeyboardShortcuts />
       </body>
     </html>
   );

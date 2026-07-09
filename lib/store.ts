@@ -13,6 +13,7 @@ import type {
 } from "./types";
 import { buildAgentSteps, buildBranchName, buildDiffFiles } from "./mockAgent";
 import { newTaskId, upsertTask } from "./db";
+import { toast } from "./toast";
 
 const DEFAULT_ISSUE: Issue = {
   rawReport: "",
@@ -276,6 +277,10 @@ export const usePatchPilot = create<PatchPilotState>((set, get) => ({
     } catch (err) {
       // Non-fatal for the demo: the in-memory flow continues either way.
       console.error("Failed to persist task", err);
+      toast.error(
+        "Couldn’t save to the database",
+        "Your progress is kept locally for this session."
+      );
     } finally {
       set(() => ({ saving: false }));
     }
