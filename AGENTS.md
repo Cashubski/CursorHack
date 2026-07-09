@@ -20,5 +20,13 @@ This repo is configured for [Cursor Cloud Agents](https://cursor.com/docs/cloud-
 
 ### Testing
 
-- Document how to run and test the app here as the project grows.
-- Prefer commands the agent can run headlessly in the cloud VM (e.g. `npm test`, `npm run build`).
+- Install deps: `npm install`.
+- Headless build check (runs type-checking + lint): `npm run build`.
+- Run locally: `npm run dev` then open `http://localhost:3000` (redirects to `/intake`).
+- Serve the production build: `npm run start`.
+- Manual demo flow: intake -> generate brief -> dispatch to agent -> watch the
+  mocked run complete -> approve the safety checklist -> merge.
+- Optional real AI brief: set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`)
+  as a secret; `/api/brief` falls back to the offline template brief if unset or
+  on error.
+- Prefer commands the agent can run headlessly in the cloud VM (e.g. `npm run build`).
