@@ -1,7 +1,12 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+// Accept either the new-style publishable key (sb_publishable_...) or the
+// legacy anon key. Both are safe to expose to the browser and operate under RLS.
+const publishableKey =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 let cached: SupabaseClient | null | undefined;
 
@@ -11,10 +16,10 @@ let cached: SupabaseClient | null | undefined;
  */
 export function getSupabase(): SupabaseClient | null {
   if (cached !== undefined) return cached;
-  cached = url && anonKey ? createClient(url, anonKey) : null;
+  cached = url && publishableKey ? createClient(url, publishableKey) : null;
   return cached;
 }
 
-export const isSupabaseConfigured = Boolean(url && anonKey);
+export const isSupabaseConfigured = Boolean(url && publishableKey);
 
 export const TASKS_TABLE = "tasks";

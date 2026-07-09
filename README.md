@@ -81,7 +81,11 @@ storage:
    policies suitable for a demo.
 3. Set env vars (see [`.env.example`](.env.example)):
    - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (new `sb_publishable_...` key) or the
+     legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` - either works.
+
+   Use only a client-safe key here. Never expose the secret / `service_role`
+   key; the app operates entirely through RLS-protected client calls.
 
 The header shows a "Supabase" / "Local" indicator so you always know which
 backend is active.
