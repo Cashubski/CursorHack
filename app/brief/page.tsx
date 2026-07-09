@@ -67,15 +67,16 @@ export default function BriefPage() {
     }
   }
 
-  function dispatch() {
+  async function dispatch() {
+    await usePatchPilot.getState().persist("running");
     router.push("/run");
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-2xl space-y-4">
       <div className="flex animate-slideUp items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold tracking-tight text-slate-900">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">
             Engineering brief
           </h2>
           <p className="mt-0.5 text-sm text-slate-500">

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { usePatchPilot } from "@/lib/store";
 import { synthesizeBrief } from "@/lib/synthesizeBrief";
+import { useEffect } from "react";
 import type { AppArea, Severity } from "@/lib/types";
 import Card from "@/components/Card";
 import BottomBar from "@/components/BottomBar";
@@ -36,7 +37,13 @@ happens almost every time when I've been offline for a while. super annoying, I 
 
 export default function IntakePage() {
   const router = useRouter();
-  const { issue, setIssue, setBrief } = usePatchPilot();
+  const { issue, setIssue, setBrief, reset } = usePatchPilot();
+
+  // Starting a new report clears any previously loaded task.
+  useEffect(() => {
+    reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const canSubmit = issue.rawReport.trim().length > 12;
 
@@ -49,16 +56,17 @@ export default function IntakePage() {
     });
   }
 
-  function generateBrief() {
+  async function generateBrief() {
     if (!canSubmit) return;
     setBrief(synthesizeBrief(issue));
+    await usePatchPilot.getState().persist("briefed");
     router.push("/brief");
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-2xl space-y-4">
       <div className="animate-slideUp">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900">
+        <h2 className="text-2xl font-bold tracking-tight text-slate-900">
           Report a bug
         </h2>
         <p className="mt-0.5 text-sm text-slate-500">

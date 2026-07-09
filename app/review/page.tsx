@@ -33,9 +33,19 @@ export default function ReviewPage() {
     router.push("/intake");
   }
 
+  async function handleDecision(decision: "approved" | "changes-requested") {
+    setDecision(decision);
+    await usePatchPilot.getState().persist();
+  }
+
+  async function handleMerge() {
+    mergeRun();
+    await usePatchPilot.getState().persist("merged");
+  }
+
   if (merged) {
     return (
-      <div className="flex min-h-[60vh] animate-slideUp flex-col items-center justify-center space-y-4 text-center">
+      <div className="mx-auto flex min-h-[60vh] max-w-2xl animate-slideUp flex-col items-center justify-center space-y-4 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl">
           ✅
         </div>
@@ -61,10 +71,10 @@ export default function ReviewPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-2xl space-y-4">
       <div className="flex animate-slideUp items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold tracking-tight text-slate-900">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">
             Human review
           </h2>
           <p className="mt-0.5 text-sm text-slate-500">
@@ -185,7 +195,7 @@ export default function ReviewPage() {
         <div className="mt-3 grid grid-cols-2 gap-3">
           <button
             type="button"
-            onClick={() => setDecision("changes-requested")}
+            onClick={() => handleDecision("changes-requested")}
             className={[
               "rounded-xl border px-3 py-2.5 text-sm font-semibold transition active:scale-[0.98]",
               review.decision === "changes-requested"
@@ -197,7 +207,7 @@ export default function ReviewPage() {
           </button>
           <button
             type="button"
-            onClick={() => setDecision("approved")}
+            onClick={() => handleDecision("approved")}
             disabled={!requiredDone}
             className={[
               "rounded-xl border px-3 py-2.5 text-sm font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50",
@@ -213,7 +223,7 @@ export default function ReviewPage() {
 
       <BottomBar
         primaryLabel="Merge patch"
-        onPrimary={mergeRun}
+        onPrimary={handleMerge}
         primaryDisabled={!canMerge}
         secondaryLabel="Back"
         onSecondary={() => router.push("/run")}

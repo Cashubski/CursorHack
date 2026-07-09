@@ -11,25 +11,25 @@ const STEPS = [
 
 export default function Stepper() {
   const pathname = usePathname();
-  const activeIndex = Math.max(
-    0,
-    STEPS.findIndex((s) => pathname.startsWith(s.path))
-  );
+  const activeIndex = STEPS.findIndex((s) => pathname.startsWith(s.path));
+
+  // Only render inside the pipeline, not on the dashboard.
+  if (activeIndex === -1) return null;
 
   return (
-    <nav
-      aria-label="Progress"
-      className="flex items-center gap-1.5 border-b border-slate-200 bg-white px-5 py-3"
-    >
-      {STEPS.map((step, i) => {
-        const done = i < activeIndex;
-        const active = i === activeIndex;
-        return (
-          <div key={step.path} className="flex flex-1 flex-col items-center gap-1">
-            <div className="flex w-full items-center">
+    <div className="border-b border-slate-200 bg-white">
+      <nav
+        aria-label="Progress"
+        className="mx-auto flex w-full max-w-2xl items-center gap-1.5 px-4 py-3 sm:px-6"
+      >
+        {STEPS.map((step, i) => {
+          const done = i < activeIndex;
+          const active = i === activeIndex;
+          return (
+            <div key={step.path} className="flex flex-1 items-center gap-2">
               <span
                 className={[
-                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold",
+                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition",
                   active
                     ? "bg-brand-600 text-white ring-4 ring-brand-100"
                     : done
@@ -39,6 +39,17 @@ export default function Stepper() {
               >
                 {done ? "✓" : i + 1}
               </span>
+              <span
+                className={`hidden text-sm font-medium sm:inline ${
+                  active
+                    ? "text-brand-700"
+                    : done
+                      ? "text-slate-600"
+                      : "text-slate-400"
+                }`}
+              >
+                {step.label}
+              </span>
               {i < STEPS.length - 1 && (
                 <span
                   className={`mx-1 h-0.5 flex-1 rounded ${
@@ -47,16 +58,9 @@ export default function Stepper() {
                 />
               )}
             </div>
-            <span
-              className={`text-[10px] font-medium ${
-                active ? "text-brand-700" : "text-slate-400"
-              }`}
-            >
-              {step.label}
-            </span>
-          </div>
-        );
-      })}
-    </nav>
+          );
+        })}
+      </nav>
+    </div>
   );
 }

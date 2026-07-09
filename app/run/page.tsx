@@ -63,6 +63,7 @@ export default function RunPage() {
       if (cancelled) return;
       usePatchPilot.getState().appendLogs(["> done - awaiting human review"]);
       usePatchPilot.getState().completeRun();
+      await usePatchPilot.getState().persist("review");
     })();
 
     return () => {
@@ -93,10 +94,10 @@ export default function RunPage() {
   const totalDeletions = run.diffFiles.reduce((a, f) => a + f.deletions, 0);
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-2xl space-y-4">
       <div className="flex animate-slideUp items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold tracking-tight text-slate-900">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">
             Agent run
           </h2>
           <p className="mt-0.5 truncate text-sm text-slate-500">{brief.title}</p>
