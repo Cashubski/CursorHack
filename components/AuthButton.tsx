@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { LogOut, ChevronDown } from "lucide-react";
+import { LogOut, ChevronDown, ArrowRight } from "lucide-react";
 import { useCollab } from "@/lib/collab";
 import { storageMode } from "@/lib/db";
 import Avatar from "./Avatar";
@@ -25,7 +25,12 @@ export default function AuthButton() {
   const ready = useCollab((s) => s.ready);
   const signIn = useCollab((s) => s.signIn);
   const signOut = useCollab((s) => s.signOut);
+  const setProfile = useCollab((s) => s.setProfile);
+  const clearProfile = useCollab((s) => s.clearProfile);
+
   const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [handle, setHandle] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,53 +43,124 @@ export default function AuthButton() {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  // Auth needs Supabase; hide entirely in local-only mode.
   if (storageMode !== "supabase" || !ready) return null;
 
-  if (!me?.signedIn) {
-    return (
-      <button
-        type="button"
-        onClick={() => signIn()}
-        className="inline-flex items-center gap-1.5 rounded-xl border border-ink-200 bg-white px-3 py-2 text-sm font-semibold text-ink-700 shadow-card transition hover:bg-ink-50 active:scale-[0.98]"
-      >
-        <GithubMark size={15} />
-        <span className="hidden sm:inline">Sign in</span>
-      </button>
-    );
+  const identified = me?.signedIn;
+
+  function join() {
+    if (!name.trim() && !handle.trim()) return;
+    setProfile(name || handle, handle);
+    setOpen(false);
+    setName("");
+    setHandle("");
   }
 
   return (
     <div className="relative" ref={menuRef}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 rounded-full border border-ink-200 bg-white py-1 pl-1 pr-2 shadow-card transition hover:bg-ink-50"
-      >
-        <Avatar member={me} size={26} ring="ring-white" />
-        <ChevronDown size={14} className="text-ink-400" />
-      </button>
+      {identified ? (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex items-center gap-1.5 rounded-full border border-ink-200 bg-white py-1 pl-1 pr-2 shadow-card transition hover:bg-ink-50"
+        >
+          <Avatar member={me!} size={26} ring="ring-white" />
+          <ChevronDown size={14} className="text-ink-400" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-ink-200 bg-white px-3 py-2 text-sm font-semibold text-ink-700 shadow-card transition hover:bg-ink-50 active:scale-[0.98]"
+        >
+          <GithubMark size={15} />
+          <span className="hidden sm:inline">Sign in</span>
+        </button>
+      )}
+
       {open && (
-        <div className="absolute right-0 top-full z-40 mt-2 w-56 animate-slideUp overflow-hidden rounded-xl border border-ink-200 bg-white p-1 shadow-pop">
-          <div className="flex items-center gap-2.5 px-3 py-2.5">
-            <Avatar member={me} size={34} ring="ring-ink-100" />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-ink-900">{me.name}</p>
-              <p className="truncate text-xs text-ink-400">@{me.handle}</p>
+        <div className="absolute right-0 top-full z-40 mt-2 w-72 animate-slideUp overflow-hidden rounded-xl border border-ink-200 bg-white p-1 shadow-pop">
+          {identified ? (
+            <>
+              <div className="flex items-center gap-2.5 px-3 py-2.5">
+                <Avatar member={me!} size={34} ring="ring-ink-100" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-ink-900">
+                    {me!.name}
+                  </p>
+                  <p className="truncate text-xs text-ink-400">
+                    @{me!.handle}
+                    {me!.source === "profile" && " · quick join"}
+                  </p>
+                </div>
+              </div>
+              <div className="my-1 h-px bg-ink-100" />
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  if (me!.source === "github") signOut();
+                  else clearProfile();
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-ink-600 transition hover:bg-ink-50"
+              >
+                <LogOut size={15} />
+                Sign out
+              </button>
+            </>
+          ) : (
+            <div className="p-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  signIn();
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-ink-900 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-ink-800"
+              >
+                <GithubMark size={15} />
+                Continue with GitHub
+              </button>
+
+              <div className="my-3 flex items-center gap-2">
+                <span className="h-px flex-1 bg-ink-100" />
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-400">
+                  or quick join
+                </span>
+                <span className="h-px flex-1 bg-ink-100" />
+              </div>
+
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Display name"
+                  className="field !py-2"
+                />
+                <input
+                  type="text"
+                  value={handle}
+                  onChange={(e) => setHandle(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && join()}
+                  placeholder="GitHub username (optional)"
+                  className="field !py-2"
+                />
+                <button
+                  type="button"
+                  onClick={join}
+                  disabled={!name.trim() && !handle.trim()}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-iris-500 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-iris-600 disabled:cursor-not-allowed disabled:bg-ink-200 disabled:text-ink-400"
+                >
+                  Join
+                  <ArrowRight size={15} />
+                </button>
+                <p className="px-1 pt-0.5 text-[11px] leading-snug text-ink-400">
+                  Adding a GitHub username pulls your real avatar — no login
+                  needed.
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="my-1 h-px bg-ink-100" />
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              signOut();
-            }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-ink-600 transition hover:bg-ink-50"
-          >
-            <LogOut size={15} />
-            Sign out
-          </button>
+          )}
         </div>
       )}
     </div>

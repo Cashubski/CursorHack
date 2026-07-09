@@ -5,14 +5,17 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase";
 import { toast } from "./toast";
 
+export type MemberSource = "github" | "profile" | "guest";
+
 export interface Member {
   /** Stable presence key for this browser tab. */
   key: string;
-  /** GitHub login when signed in, otherwise a guest label. */
+  /** GitHub login (or chosen handle) when identified, else a guest label. */
   handle: string;
   name: string;
   avatar: string | null;
   color: string;
+  source: MemberSource;
   signedIn: boolean;
 }
 
@@ -25,9 +28,13 @@ interface CollabState {
   setReady: (ready: boolean) => void;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
+  /** Zero-setup identity: join with a display name + optional GitHub handle. */
+  setProfile: (name: string, handle?: string) => void;
+  clearProfile: () => Promise<void>;
 }
 
 const GUEST_KEY = "patchpilot.guest.v1";
+const PROFILE_KEY = "patchpilot.profile.v1";
 
 const COLORS = [
   "#6c5ef5",
@@ -59,6 +66,25 @@ function guestKey(): string {
   return k;
 }
 
+interface Profile {
+  name: string;
+  handle: string;
+}
+
+function readProfile(): Profile | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(PROFILE_KEY);
+    return raw ? (JSON.parse(raw) as Profile) : null;
+  } catch {
+    return null;
+  }
+}
+
+function cleanHandle(handle?: string): string {
+  return (handle ?? "").trim().replace(/^@/, "").replace(/[^a-zA-Z0-9-]/g, "");
+}
+
 function guestMember(): Member {
   const key = guestKey();
   return {
@@ -67,7 +93,23 @@ function guestMember(): Member {
     name: `Guest ${key.slice(0, 4)}`,
     avatar: null,
     color: colorFor(key),
+    source: "guest",
     signedIn: false
+  };
+}
+
+function memberFromProfile(p: Profile): Member {
+  const key = guestKey();
+  const handle = cleanHandle(p.handle);
+  const name = p.name.trim() || handle || "Anon";
+  return {
+    key,
+    handle: handle || name.toLowerCase().replace(/\s+/g, "-"),
+    name,
+    avatar: handle ? `https://github.com/${handle}.png?size=96` : null,
+    color: colorFor(handle || name),
+    source: "profile",
+    signedIn: true
   };
 }
 
@@ -82,8 +124,22 @@ function memberFromUser(user: any): Member {
     name: meta.full_name || meta.name || handle,
     avatar: meta.avatar_url || null,
     color: colorFor(handle),
+    source: "github",
     signedIn: true
   };
+}
+
+/** Resolve the local identity: saved profile if present, else a guest. */
+function localMember(): Member {
+  const p = readProfile();
+  return p ? memberFromProfile(p) : guestMember();
+}
+
+let channel: RealtimeChannel | null = null;
+let started = false;
+
+async function trackMe() {
+  if (channel) await channel.track(useCollab.getState().me ?? guestMember());
 }
 
 export const useCollab = create<CollabState>((set) => ({
@@ -107,7 +163,7 @@ export const useCollab = create<CollabState>((set) => ({
     if (error) {
       toast.error(
         "GitHub sign-in isn’t enabled yet",
-        "Enable the GitHub provider in Supabase Auth."
+        "Use Quick join, or enable the GitHub provider in Supabase."
       );
     }
   },
@@ -116,11 +172,30 @@ export const useCollab = create<CollabState>((set) => ({
     const supabase = getSupabase();
     await supabase?.auth.signOut();
     toast.info("Signed out");
+  },
+
+  setProfile: (name, handle) => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        PROFILE_KEY,
+        JSON.stringify({ name: name.trim(), handle: cleanHandle(handle) })
+      );
+    }
+    const me = memberFromProfile({ name, handle: handle ?? "" });
+    set({ me });
+    void trackMe();
+    toast.success("You’re in", `Joined as ${me.name}.`);
+  },
+
+  clearProfile: async () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(PROFILE_KEY);
+    }
+    set({ me: guestMember() });
+    await trackMe();
+    toast.info("Left the room");
   }
 }));
-
-let channel: RealtimeChannel | null = null;
-let started = false;
 
 function computeOnline(): Member[] {
   if (!channel) return [];
@@ -139,15 +214,16 @@ function computeOnline(): Member[] {
 }
 
 /**
- * Boots the collaboration layer: resolves the current identity (GitHub session
- * or guest), joins a realtime presence room, and keeps the store in sync. Safe
- * no-op when Supabase isn't configured. Returns a cleanup function.
+ * Boots the collaboration layer: resolves identity (GitHub session, saved
+ * profile, or guest), joins a realtime presence room, and keeps the store in
+ * sync. Safe no-op when Supabase isn't configured. Returns a cleanup function.
  */
 export function initCollab(): () => void {
   const store = useCollab.getState();
   const supabase = getSupabase();
 
   if (!supabase) {
+    store.setMe(localMember());
     store.setReady(true);
     return () => {};
   }
@@ -158,7 +234,7 @@ export function initCollab(): () => void {
     const { data } = await supabase!.auth.getSession();
     const me = data.session?.user
       ? memberFromUser(data.session.user)
-      : guestMember();
+      : localMember();
     useCollab.getState().setMe(me);
     useCollab.getState().setReady(true);
 
@@ -170,18 +246,16 @@ export function initCollab(): () => void {
         useCollab.getState().setOnline(computeOnline());
       })
       .subscribe(async (status) => {
-        if (status === "SUBSCRIBED" && channel) {
-          await channel.track(useCollab.getState().me ?? me);
-        }
+        if (status === "SUBSCRIBED") await trackMe();
       });
   }
 
   boot();
 
   const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
-    const me = session?.user ? memberFromUser(session.user) : guestMember();
+    const me = session?.user ? memberFromUser(session.user) : localMember();
     useCollab.getState().setMe(me);
-    if (channel) await channel.track(me);
+    await trackMe();
     if (session?.user) {
       toast.success("Signed in", `Welcome, ${me.name}.`);
     }

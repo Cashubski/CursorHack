@@ -99,11 +99,15 @@ When Supabase is configured, PatchPilot becomes multiplayer:
 - **Live presence** — the header shows a realtime avatar stack of everyone
   currently in the app (via Supabase Realtime Presence). This works out of the
   box with just the anon/publishable key — guests get a colored avatar.
-- **Sign in with GitHub** — real accounts via Supabase Auth. Once signed in, a
+- **Quick join** — zero-setup identity: enter a display name + optional GitHub
+  username and you're in, with your real avatar pulled from the public
+  `github.com/<user>.png`. Great for demos; needs no OAuth configuration.
+- **Sign in with GitHub** — real accounts via Supabase Auth. Once identified, a
   reporter's handle prefills on intake, and approvals/merges are attributed
   ("Approved by @you", "Merged by @you"), so a whole team can share one board.
 
-Presence needs no extra setup. To enable **GitHub sign-in**, wire up the OAuth
+Presence and Quick join need no extra setup. To enable **GitHub OAuth**, wire up
+the OAuth
 app once (values below assume the deployed URL and Supabase project ref
 `pcpxipuvrgkqionpqrwr`):
 

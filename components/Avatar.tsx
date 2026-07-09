@@ -1,6 +1,9 @@
+"use client";
+
+import { useState } from "react";
 import type { Member } from "@/lib/collab";
 
-/** Renders a member's GitHub avatar, or a colored initial fallback. */
+/** Renders a member's avatar image, falling back to a colored initial. */
 export default function Avatar({
   member,
   size = 24,
@@ -10,12 +13,13 @@ export default function Avatar({
   size?: number;
   ring?: string;
 }) {
-  const initial = (member.signedIn ? member.handle : member.name)
+  const [failed, setFailed] = useState(false);
+  const initial = (member.name || member.handle)
     .replace(/^@/, "")
     .charAt(0)
     .toUpperCase();
 
-  if (member.avatar) {
+  if (member.avatar && !failed) {
     // Plain <img> to avoid next/image remote-domain config.
     // eslint-disable-next-line @next/next/no-img-element
     return (
@@ -25,6 +29,7 @@ export default function Avatar({
         width={size}
         height={size}
         referrerPolicy="no-referrer"
+        onError={() => setFailed(true)}
         className={`rounded-full object-cover ring-2 ${ring}`}
         style={{ width: size, height: size }}
       />
