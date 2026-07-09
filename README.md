@@ -92,6 +92,37 @@ storage:
 The header shows a "Supabase" / "Local" indicator so you always know which
 backend is active.
 
+## Collaboration & GitHub sign-in
+
+When Supabase is configured, PatchPilot becomes multiplayer:
+
+- **Live presence** — the header shows a realtime avatar stack of everyone
+  currently in the app (via Supabase Realtime Presence). This works out of the
+  box with just the anon/publishable key — guests get a colored avatar.
+- **Sign in with GitHub** — real accounts via Supabase Auth. Once signed in, a
+  reporter's handle prefills on intake, and approvals/merges are attributed
+  ("Approved by @you", "Merged by @you"), so a whole team can share one board.
+
+Presence needs no extra setup. To enable **GitHub sign-in**, wire up the OAuth
+app once (values below assume the deployed URL and Supabase project ref
+`pcpxipuvrgkqionpqrwr`):
+
+1. GitHub → Settings → Developer settings → **OAuth Apps → New OAuth App**:
+   - Homepage URL: `https://patchpilot-psi.vercel.app`
+   - Authorization callback URL:
+     `https://pcpxipuvrgkqionpqrwr.supabase.co/auth/v1/callback`
+2. Copy the **Client ID** and generate a **Client Secret**.
+3. Supabase → **Authentication → Providers → GitHub**: enable it and paste the
+   Client ID + Secret.
+4. Supabase → **Authentication → URL Configuration**: set Site URL to
+   `https://patchpilot-psi.vercel.app` and add redirect URLs
+   `https://patchpilot-psi.vercel.app/**` (plus `http://localhost:3000/**` for
+   local dev). Add Vercel Preview domains too if you want sign-in on previews.
+
+No app env vars are needed — the GitHub credentials live in Supabase. Until the
+provider is enabled, the "Sign in" button shows a friendly notice and the rest
+of the app (including presence) keeps working.
+
 ## Seed demo data
 
 To populate the board with a few realistic tasks (great for a demo):

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Sparkles, Wand2 } from "lucide-react";
 import { usePatchPilot } from "@/lib/store";
+import { useCollab } from "@/lib/collab";
 import { synthesizeBrief } from "@/lib/synthesizeBrief";
 import { toast } from "@/lib/toast";
 import type { AppArea, Severity } from "@/lib/types";
@@ -40,12 +41,21 @@ happens almost every time when I've been offline for a while. super annoying, I 
 export default function IntakePage() {
   const router = useRouter();
   const { issue, setIssue, setBrief, reset } = usePatchPilot();
+  const me = useCollab((s) => s.me);
 
   // Starting a new report clears any previously loaded task.
   useEffect(() => {
     reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Prefill the reporter with the signed-in GitHub handle (until edited).
+  useEffect(() => {
+    if (me?.signedIn && !issue.reporter) {
+      setIssue({ reporter: me.handle });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [me?.signedIn]);
 
   const canSubmit = issue.rawReport.trim().length > 12;
 

@@ -95,6 +95,10 @@ export interface ReviewState {
   checklist: SafetyCheckItem[];
   decision: ReviewDecision;
   note: string;
+  /** GitHub handle of the reviewer who approved / requested changes. */
+  reviewedBy?: string | null;
+  /** GitHub handle of whoever merged the patch. */
+  mergedBy?: string | null;
 }
 
 export type TaskStatus =

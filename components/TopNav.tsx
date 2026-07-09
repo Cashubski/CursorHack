@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { Database, HardDrive, Plus } from "lucide-react";
 import { storageMode } from "@/lib/db";
 import Logo from "./Logo";
+import PresenceBar from "./PresenceBar";
+import AuthButton from "./AuthButton";
 
 export default function TopNav() {
   const pathname = usePathname();
@@ -39,8 +41,9 @@ export default function TopNav() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2.5">
+          <PresenceBar />
           <span
-            className="hidden items-center gap-1.5 rounded-full border border-ink-200 bg-white px-2.5 py-1 text-[11px] font-medium text-ink-500 shadow-card sm:inline-flex"
+            className="hidden items-center gap-1.5 rounded-full border border-ink-200 bg-white px-2.5 py-1 text-[11px] font-medium text-ink-500 shadow-card lg:inline-flex"
             title={
               storageMode === "supabase"
                 ? "Connected to Supabase"
@@ -61,12 +64,13 @@ export default function TopNav() {
               }`}
             />
           </span>
+          <AuthButton />
           <Link
             href="/intake"
             className="inline-flex items-center gap-1.5 rounded-xl bg-ink-900 px-3.5 py-2 text-sm font-semibold text-white shadow-card transition hover:bg-ink-800 active:scale-[0.98]"
           >
             <Plus size={16} />
-            New report
+            <span className="hidden sm:inline">New report</span>
           </Link>
         </div>
       </div>

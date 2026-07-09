@@ -6,6 +6,7 @@ import TopNav from "@/components/TopNav";
 import Stepper from "@/components/Stepper";
 import Toaster from "@/components/Toaster";
 import KeyboardShortcuts from "@/components/KeyboardShortcuts";
+import CollabProvider from "@/components/CollabProvider";
 
 export const metadata: Metadata = {
   title: "PatchPilot - Bug reports to reviewed patches",
@@ -47,6 +48,7 @@ export default function RootLayout({
         </footer>
         <Toaster />
         <KeyboardShortcuts />
+        <CollabProvider />
       </body>
     </html>
   );

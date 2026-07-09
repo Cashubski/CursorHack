@@ -113,9 +113,9 @@ interface PatchPilotState {
   completeRun: () => void;
 
   toggleCheck: (key: string) => void;
-  setDecision: (decision: ReviewDecision) => void;
+  setDecision: (decision: ReviewDecision, by?: string | null) => void;
   setReviewNote: (note: string) => void;
-  mergeRun: () => void;
+  mergeRun: (by?: string | null) => void;
 
   snapshot: () => Task;
   persist: (status?: TaskStatus) => Promise<void>;
@@ -236,9 +236,9 @@ export const usePatchPilot = create<PatchPilotState>((set, get) => ({
       }
     })),
 
-  setDecision: (decision) =>
+  setDecision: (decision, by = null) =>
     set((s) => ({
-      review: { ...s.review, decision },
+      review: { ...s.review, decision, reviewedBy: by ?? s.review.reviewedBy ?? null },
       status:
         decision === "changes-requested"
           ? "changes-requested"
@@ -250,8 +250,12 @@ export const usePatchPilot = create<PatchPilotState>((set, get) => ({
   setReviewNote: (note) =>
     set((s) => ({ review: { ...s.review, note } })),
 
-  mergeRun: () =>
-    set((s) => ({ status: "merged", run: { ...s.run, status: "merged" } })),
+  mergeRun: (by = null) =>
+    set((s) => ({
+      status: "merged",
+      run: { ...s.run, status: "merged" },
+      review: { ...s.review, mergedBy: by ?? s.review.mergedBy ?? null }
+    })),
 
   snapshot: () => {
     const s = get();

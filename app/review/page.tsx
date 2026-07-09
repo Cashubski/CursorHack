@@ -15,6 +15,7 @@ import {
   Cpu
 } from "lucide-react";
 import { usePatchPilot } from "@/lib/store";
+import { useCollab } from "@/lib/collab";
 import { toast } from "@/lib/toast";
 import Card from "@/components/Card";
 import Badge from "@/components/Badge";
@@ -26,6 +27,8 @@ export default function ReviewPage() {
   const router = useRouter();
   const { brief, run, review, toggleCheck, setDecision, setReviewNote, mergeRun, reset } =
     usePatchPilot();
+  const me = useCollab((s) => s.me);
+  const myHandle = me?.signedIn ? me.handle : null;
 
   useEffect(() => {
     if (!brief) router.replace("/intake");
@@ -51,7 +54,7 @@ export default function ReviewPage() {
   }
 
   async function handleDecision(decision: "approved" | "changes-requested") {
-    setDecision(decision);
+    setDecision(decision, myHandle);
     await usePatchPilot.getState().persist();
     if (decision === "approved") {
       toast.success("Approved", "Safety gate cleared — ready to merge.");
@@ -61,7 +64,7 @@ export default function ReviewPage() {
   }
 
   async function handleMerge() {
-    mergeRun();
+    mergeRun(myHandle);
     await usePatchPilot.getState().persist("merged");
     toast.success("Patch merged", "The reviewed patch is on its way.");
   }
@@ -82,7 +85,14 @@ export default function ReviewPage() {
               </h2>
               <p className="mt-1 text-sm text-ink-500">
                 <span className="font-mono text-ink-700">{run.branch}</span> was
-                approved and merged.
+                approved and merged
+                {review.mergedBy ? (
+                  <>
+                    {" "}
+                    by <span className="font-semibold text-ink-700">@{review.mergedBy}</span>
+                  </>
+                ) : null}
+                .
               </p>
             </div>
             <div className="mt-1 flex flex-wrap items-center justify-center gap-3">
@@ -292,6 +302,12 @@ export default function ReviewPage() {
             Approve
           </button>
         </div>
+        {review.decision !== "pending" && review.reviewedBy && (
+          <p className="mt-2.5 text-xs text-ink-400">
+            {review.decision === "approved" ? "Approved" : "Changes requested"} by{" "}
+            <span className="font-semibold text-ink-600">@{review.reviewedBy}</span>
+          </p>
+        )}
       </Card>
 
       <BottomBar
