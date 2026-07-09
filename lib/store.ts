@@ -7,9 +7,12 @@ import type {
   Issue,
   ReviewDecision,
   ReviewState,
-  SafetyCheckItem
+  SafetyCheckItem,
+  Task,
+  TaskStatus
 } from "./types";
 import { buildAgentSteps, buildBranchName, buildDiffFiles } from "./mockAgent";
+import { newTaskId, upsertTask } from "./db";
 
 const DEFAULT_ISSUE: Issue = {
   rawReport: "",
@@ -77,10 +80,14 @@ function freshReview(): ReviewState {
 }
 
 interface PatchPilotState {
+  taskId: string | null;
+  createdAt: string | null;
+  status: TaskStatus;
   issue: Issue;
   brief: EngineeringBrief | null;
   run: AgentRun;
   review: ReviewState;
+  saving: boolean;
 
   setIssue: (patch: Partial<Issue>) => void;
   setBrief: (brief: EngineeringBrief) => void;
@@ -96,20 +103,31 @@ interface PatchPilotState {
   setReviewNote: (note: string) => void;
   mergeRun: () => void;
 
+  snapshot: () => Task;
+  persist: (status?: TaskStatus) => Promise<void>;
+  loadTask: (task: Task) => void;
   reset: () => void;
 }
 
 export const usePatchPilot = create<PatchPilotState>((set, get) => ({
+  taskId: null,
+  createdAt: null,
+  status: "triage",
   issue: { ...DEFAULT_ISSUE },
   brief: null,
   run: freshRun(),
   review: freshReview(),
+  saving: false,
 
   setIssue: (patch) => set((s) => ({ issue: { ...s.issue, ...patch } })),
 
   setBrief: (brief) =>
-    set(() => ({
+    set((s) => ({
       brief,
+      status: "briefed",
+      // Preserve identity when regenerating; mint one on first brief.
+      taskId: s.taskId ?? newTaskId(),
+      createdAt: s.createdAt ?? new Date().toISOString(),
       run: freshRun(),
       review: freshReview()
     })),
@@ -121,6 +139,7 @@ export const usePatchPilot = create<PatchPilotState>((set, get) => ({
     const { brief } = get();
     if (!brief) return;
     set(() => ({
+      status: "running",
       run: {
         ...freshRun(),
         status: "running",
@@ -146,7 +165,7 @@ export const usePatchPilot = create<PatchPilotState>((set, get) => ({
     })),
 
   completeRun: () =>
-    set((s) => ({ run: { ...s.run, status: "awaiting-review" } })),
+    set((s) => ({ status: "review", run: { ...s.run, status: "awaiting-review" } })),
 
   toggleCheck: (key) =>
     set((s) => ({
@@ -159,18 +178,71 @@ export const usePatchPilot = create<PatchPilotState>((set, get) => ({
     })),
 
   setDecision: (decision) =>
-    set((s) => ({ review: { ...s.review, decision } })),
+    set((s) => ({
+      review: { ...s.review, decision },
+      status:
+        decision === "changes-requested"
+          ? "changes-requested"
+          : s.status === "changes-requested"
+            ? "review"
+            : s.status
+    })),
 
   setReviewNote: (note) =>
     set((s) => ({ review: { ...s.review, note } })),
 
-  mergeRun: () => set((s) => ({ run: { ...s.run, status: "merged" } })),
+  mergeRun: () =>
+    set((s) => ({ status: "merged", run: { ...s.run, status: "merged" } })),
+
+  snapshot: () => {
+    const s = get();
+    return {
+      id: s.taskId ?? newTaskId(),
+      createdAt: s.createdAt ?? new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: s.status,
+      issue: s.issue,
+      brief: s.brief,
+      run: s.brief ? s.run : null,
+      review: s.review
+    };
+  },
+
+  persist: async (status) => {
+    if (status) set(() => ({ status }));
+    const snap = get().snapshot();
+    if (!get().taskId) set(() => ({ taskId: snap.id, createdAt: snap.createdAt }));
+    set(() => ({ saving: true }));
+    try {
+      await upsertTask(snap);
+    } catch (err) {
+      // Non-fatal for the demo: the in-memory flow continues either way.
+      console.error("Failed to persist task", err);
+    } finally {
+      set(() => ({ saving: false }));
+    }
+  },
+
+  loadTask: (task) =>
+    set(() => ({
+      taskId: task.id,
+      createdAt: task.createdAt,
+      status: task.status,
+      issue: task.issue,
+      brief: task.brief,
+      run: task.run ?? freshRun(),
+      review: task.review ?? freshReview()
+    })),
 
   reset: () =>
     set(() => ({
+      taskId: null,
+      createdAt: null,
+      status: "triage",
       issue: { ...DEFAULT_ISSUE },
       brief: null,
       run: freshRun(),
-      review: freshReview()
+      review: freshReview(),
+      saving: false
     }))
 }));

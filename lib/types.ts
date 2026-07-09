@@ -81,3 +81,23 @@ export interface ReviewState {
   decision: ReviewDecision;
   note: string;
 }
+
+export type TaskStatus =
+  | "triage"
+  | "briefed"
+  | "running"
+  | "review"
+  | "changes-requested"
+  | "merged";
+
+/** A full bug-report task persisted to the database (one row). */
+export interface Task {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  status: TaskStatus;
+  issue: Issue;
+  brief: EngineeringBrief | null;
+  run: AgentRun | null;
+  review: ReviewState | null;
+}
