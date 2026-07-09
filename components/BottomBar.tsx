@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
  */
 export default function BottomBar({
   primaryLabel,
+  primaryIcon,
   onPrimary,
   primaryDisabled = false,
   secondaryLabel,
@@ -15,6 +16,7 @@ export default function BottomBar({
   helper
 }: {
   primaryLabel: string;
+  primaryIcon?: ReactNode;
   onPrimary: () => void;
   primaryDisabled?: boolean;
   secondaryLabel?: string;
@@ -22,9 +24,9 @@ export default function BottomBar({
   helper?: ReactNode;
 }) {
   return (
-    <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center">
+    <div className="mt-6 flex flex-col gap-3 border-t border-ink-200/70 pt-4 sm:flex-row sm:items-center">
       {helper && (
-        <p className="order-2 text-sm text-slate-500 sm:order-1 sm:mr-auto">
+        <p className="order-2 text-sm text-ink-400 sm:order-1 sm:mr-auto">
           {helper}
         </p>
       )}
@@ -33,7 +35,7 @@ export default function BottomBar({
           <button
             type="button"
             onClick={onSecondary}
-            className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 active:scale-[0.98]"
+            className="rounded-xl border border-ink-200 bg-white px-5 py-2.5 text-sm font-semibold text-ink-700 shadow-card transition hover:bg-ink-50 active:scale-[0.98]"
           >
             {secondaryLabel}
           </button>
@@ -42,8 +44,9 @@ export default function BottomBar({
           type="button"
           onClick={onPrimary}
           disabled={primaryDisabled}
-          className="rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-iris-500 px-6 py-2.5 text-sm font-semibold text-white shadow-[0_6px_16px_-6px_rgba(108,94,245,0.6)] transition hover:bg-iris-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-ink-200 disabled:text-ink-400 disabled:shadow-none"
         >
+          {primaryIcon}
           {primaryLabel}
         </button>
       </div>

@@ -12,15 +12,61 @@ body {
 }
 
 body {
-  @apply text-slate-900 antialiased;
+  @apply bg-ink-50 text-ink-900 antialiased;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Thin, unobtrusive scrollbars inside the phone frame */
+::selection {
+  background-color: rgba(108, 94, 245, 0.22);
+}
+
+/* Refined focus ring for buttons and links (inputs style their own focus) */
+:where(a, button, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px #f6f7f9,
+    0 0 0 4px rgba(108, 94, 245, 0.55);
+  border-radius: 0.75rem;
+}
+
+/* Shared form field styling */
+.field {
+  @apply w-full rounded-xl border border-ink-200 bg-ink-50 p-3 text-sm text-ink-800 outline-none transition placeholder:text-ink-400;
+}
+.field:focus {
+  @apply border-iris-400 bg-white ring-4 ring-iris-100;
+}
+
+/* Thin, unobtrusive scrollbars */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Eyebrow label used above section titles */
+.eyebrow {
+  @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400;
+}
+
+/* Subtle skeleton shimmer */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.65),
+    transparent
+  );
+  animation: shimmer 1.6s infinite;
 }
