@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { Sparkles, Wand2 } from "lucide-react";
 import { usePatchPilot } from "@/lib/store";
 import { synthesizeBrief } from "@/lib/synthesizeBrief";
-import { useEffect } from "react";
 import type { AppArea, Severity } from "@/lib/types";
 import Card from "@/components/Card";
 import BottomBar from "@/components/BottomBar";
@@ -66,11 +67,12 @@ export default function IntakePage() {
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div className="animate-slideUp">
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+        <p className="eyebrow">Step 1 · Intake</p>
+        <h2 className="mt-1 text-2xl font-semibold tracking-tight text-ink-900">
           Report a bug
         </h2>
-        <p className="mt-0.5 text-sm text-slate-500">
-          Paste the raw report exactly as it came in. PatchPilot will structure
+        <p className="mt-1 text-sm text-ink-500">
+          Paste the raw report exactly as it came in — PatchPilot will structure
           it for the agent.
         </p>
       </div>
@@ -81,8 +83,9 @@ export default function IntakePage() {
           <button
             type="button"
             onClick={loadSample}
-            className="rounded-lg bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-700 transition active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-iris-50 px-2.5 py-1 text-[11px] font-semibold text-iris-700 transition hover:bg-iris-100 active:scale-95"
           >
+            <Sparkles size={12} />
             Load sample
           </button>
         }
@@ -92,7 +95,7 @@ export default function IntakePage() {
           onChange={(e) => setIssue({ rawReport: e.target.value })}
           rows={8}
           placeholder="e.g. the app crashes when I tap save after being offline..."
-          className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-relaxed text-slate-800 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100"
+          className="field resize-none leading-relaxed"
         />
       </Card>
 
@@ -102,52 +105,55 @@ export default function IntakePage() {
           value={issue.reporter}
           onChange={(e) => setIssue({ reporter: e.target.value })}
           placeholder="username or email (optional)"
-          className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100"
+          className="field"
         />
       </Card>
 
-      <Card title="Severity">
-        <div className="grid grid-cols-4 gap-2">
-          {SEVERITIES.map((s) => (
-            <button
-              key={s.value}
-              type="button"
-              onClick={() => setIssue({ severity: s.value })}
-              className={[
-                "rounded-xl border px-2 py-2 text-xs font-semibold transition active:scale-95",
-                issue.severity === s.value
-                  ? "border-brand-500 bg-brand-600 text-white"
-                  : "border-slate-200 bg-white text-slate-600"
-              ].join(" ")}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
-      </Card>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Card title="Severity">
+          <div className="grid grid-cols-2 gap-2">
+            {SEVERITIES.map((s) => (
+              <button
+                key={s.value}
+                type="button"
+                onClick={() => setIssue({ severity: s.value })}
+                className={[
+                  "rounded-xl border px-2 py-2 text-xs font-semibold transition active:scale-95",
+                  issue.severity === s.value
+                    ? "border-transparent bg-ink-900 text-white"
+                    : "border-ink-200 bg-white text-ink-500 hover:border-ink-300"
+                ].join(" ")}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </Card>
 
-      <Card title="Affected area">
-        <div className="flex flex-wrap gap-2">
-          {AREAS.map((area) => (
-            <button
-              key={area}
-              type="button"
-              onClick={() => setIssue({ area })}
-              className={[
-                "rounded-full border px-3 py-1.5 text-xs font-medium transition active:scale-95",
-                issue.area === area
-                  ? "border-brand-500 bg-brand-50 text-brand-700"
-                  : "border-slate-200 bg-white text-slate-600"
-              ].join(" ")}
-            >
-              {area}
-            </button>
-          ))}
-        </div>
-      </Card>
+        <Card title="Affected area">
+          <div className="flex flex-wrap gap-2">
+            {AREAS.map((area) => (
+              <button
+                key={area}
+                type="button"
+                onClick={() => setIssue({ area })}
+                className={[
+                  "rounded-full border px-3 py-1.5 text-xs font-medium transition active:scale-95",
+                  issue.area === area
+                    ? "border-iris-200 bg-iris-50 text-iris-700"
+                    : "border-ink-200 bg-white text-ink-500 hover:border-ink-300"
+                ].join(" ")}
+              >
+                {area}
+              </button>
+            ))}
+          </div>
+        </Card>
+      </div>
 
       <BottomBar
         primaryLabel="Generate brief"
+        primaryIcon={<Wand2 size={16} />}
         onPrimary={generateBrief}
         primaryDisabled={!canSubmit}
         helper={

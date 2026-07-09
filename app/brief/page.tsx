@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { RefreshCw, Rocket, FileCode2 } from "lucide-react";
 import { usePatchPilot } from "@/lib/store";
 import type { EngineeringBrief, RiskLevel } from "@/lib/types";
 import Card from "@/components/Card";
@@ -27,13 +28,11 @@ function ListEditor({
     <textarea
       value={value.join("\n")}
       onChange={(e) =>
-        onChange(
-          e.target.value.split("\n").map((l) => l.replace(/^[-•]\s*/, ""))
-        )
+        onChange(e.target.value.split("\n").map((l) => l.replace(/^[-•]\s*/, "")))
       }
       rows={Math.max(3, value.length)}
       placeholder={placeholder}
-      className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-relaxed text-slate-800 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100"
+      className="field resize-none leading-relaxed"
     />
   );
 }
@@ -43,7 +42,6 @@ export default function BriefPage() {
   const { issue, brief, updateBrief, setBrief } = usePatchPilot();
   const [regenerating, setRegenerating] = useState(false);
 
-  // Guard: if someone lands here without a brief, send them back to intake.
   useEffect(() => {
     if (!brief) router.replace("/intake");
   }, [brief, router]);
@@ -76,17 +74,18 @@ export default function BriefPage() {
     <div className="mx-auto max-w-2xl space-y-4">
       <div className="flex animate-slideUp items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+          <p className="eyebrow">Step 2 · Brief</p>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-ink-900">
             Engineering brief
           </h2>
-          <p className="mt-0.5 text-sm text-slate-500">
-            AI-structured from the raw report. Edit anything before dispatch.
+          <p className="mt-1 text-sm text-ink-500">
+            Structured from the raw report. Edit anything before dispatch.
           </p>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
           <Badge tone={RISK_TONE[brief.risk]}>{brief.risk} risk</Badge>
-          <Badge tone={brief.source === "openai" ? "brand" : "slate"}>
-            {brief.source === "openai" ? "AI" : "auto"}
+          <Badge tone={brief.source === "openai" ? "brand" : "slate"} dot={false}>
+            {brief.source === "openai" ? "AI generated" : "auto-structured"}
           </Badge>
         </div>
       </div>
@@ -98,9 +97,10 @@ export default function BriefPage() {
             type="button"
             onClick={regenerate}
             disabled={regenerating}
-            className="rounded-lg bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-700 transition active:scale-95 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-iris-50 px-2.5 py-1 text-[11px] font-semibold text-iris-700 transition hover:bg-iris-100 active:scale-95 disabled:opacity-50"
           >
-            {regenerating ? "Regenerating..." : "Regenerate"}
+            <RefreshCw size={12} className={regenerating ? "animate-spin" : ""} />
+            {regenerating ? "Regenerating" : "Regenerate"}
           </button>
         }
       >
@@ -108,7 +108,7 @@ export default function BriefPage() {
           type="text"
           value={brief.title}
           onChange={(e) => updateBrief({ title: e.target.value })}
-          className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100"
+          className="field !text-[15px] font-semibold !text-ink-900"
         />
       </Card>
 
@@ -117,7 +117,7 @@ export default function BriefPage() {
           value={brief.summary}
           onChange={(e) => updateBrief({ summary: e.target.value })}
           rows={4}
-          className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-relaxed text-slate-800 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100"
+          className="field resize-none leading-relaxed"
         />
       </Card>
 
@@ -129,17 +129,17 @@ export default function BriefPage() {
         />
       </Card>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Card title="Affected area">
           <input
             type="text"
             value={brief.affectedArea}
             onChange={(e) => updateBrief({ affectedArea: e.target.value })}
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-800 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100"
+            className="field"
           />
         </Card>
         <Card title="Reporter">
-          <p className="rounded-xl bg-slate-50 p-2.5 text-sm text-slate-700">
+          <p className="rounded-xl bg-ink-50 px-3 py-3 text-sm text-ink-600">
             {issue.reporter || "unknown"}
           </p>
         </Card>
@@ -150,7 +150,7 @@ export default function BriefPage() {
           value={brief.proposedApproach}
           onChange={(e) => updateBrief({ proposedApproach: e.target.value })}
           rows={3}
-          className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-relaxed text-slate-800 outline-none transition focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100"
+          className="field resize-none leading-relaxed"
         />
       </Card>
 
@@ -162,21 +162,29 @@ export default function BriefPage() {
         />
       </Card>
 
-      <Card title="Likely files">
-        <ul className="space-y-1.5">
-          {brief.likelyFiles.map((file) => (
-            <li
-              key={file}
-              className="rounded-lg bg-slate-900/90 px-3 py-2 font-mono text-[12px] text-emerald-300"
-            >
-              {file}
-            </li>
-          ))}
-        </ul>
+      <Card title="Likely files" icon={<FileCode2 size={13} />}>
+        <div className="overflow-hidden rounded-xl border border-ink-800 bg-ink-950">
+          <div className="flex items-center gap-1.5 border-b border-white/5 px-3 py-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-rose-400/80" />
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
+          </div>
+          <ul className="divide-y divide-white/5">
+            {brief.likelyFiles.map((file) => (
+              <li
+                key={file}
+                className="px-3 py-2 font-mono text-[12px] text-emerald-300"
+              >
+                <span className="text-white/30">$</span> {file}
+              </li>
+            ))}
+          </ul>
+        </div>
       </Card>
 
       <BottomBar
         primaryLabel="Dispatch to agent"
+        primaryIcon={<Rocket size={16} />}
         onPrimary={dispatch}
         secondaryLabel="Back"
         onSecondary={() => router.push("/intake")}

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { GitBranch, Timer, Terminal, FileDiff, ArrowRight } from "lucide-react";
 import { usePatchPilot } from "@/lib/store";
 import { stepLogLines } from "@/lib/mockAgent";
 import Card from "@/components/Card";
@@ -51,7 +52,9 @@ export default function RunPage() {
         usePatchPilot.getState().setStepStatus(i, "active");
         for (const line of stepLogLines(steps[i], currentBrief)) {
           if (cancelled) return;
-          await sleep(steps[i].durationMs / (stepLogLines(steps[i], currentBrief).length + 1));
+          await sleep(
+            steps[i].durationMs / (stepLogLines(steps[i], currentBrief).length + 1)
+          );
           if (cancelled) return;
           usePatchPilot.getState().appendLogs([line]);
         }
@@ -71,7 +74,6 @@ export default function RunPage() {
     };
   }, []);
 
-  // Elapsed timer while running.
   useEffect(() => {
     if (run.status !== "running" || !run.startedAt) return;
     const id = setInterval(() => {
@@ -80,7 +82,6 @@ export default function RunPage() {
     return () => clearInterval(id);
   }, [run.status, run.startedAt]);
 
-  // Auto-scroll the log console.
   useEffect(() => {
     if (logRef.current) {
       logRef.current.scrollTop = logRef.current.scrollHeight;
@@ -96,122 +97,167 @@ export default function RunPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div className="flex animate-slideUp items-start justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+        <div className="min-w-0">
+          <p className="eyebrow">Step 3 · Run</p>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-ink-900">
             Agent run
           </h2>
-          <p className="mt-0.5 truncate text-sm text-slate-500">{brief.title}</p>
+          <p className="mt-1 truncate text-sm text-ink-500">{brief.title}</p>
         </div>
-        <Badge tone={isDone ? "green" : "brand"}>
+        <Badge tone={isDone ? "green" : "amber"}>
           {isDone ? "complete" : "running"}
         </Badge>
       </div>
 
-      <Card>
-        <div className="flex items-center justify-between">
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+      <div className="grid grid-cols-2 gap-4">
+        <Card>
+          <div className="flex items-center gap-2 text-ink-400">
+            <GitBranch size={14} />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.12em]">
               Branch
-            </p>
-            <p className="truncate font-mono text-sm text-slate-800">
-              {run.branch || "..."}
-            </p>
+            </span>
           </div>
-          <div className="text-right">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          <p className="mt-1.5 truncate font-mono text-sm text-ink-800">
+            {run.branch || "…"}
+          </p>
+        </Card>
+        <Card>
+          <div className="flex items-center gap-2 text-ink-400">
+            <Timer size={14} />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.12em]">
               Elapsed
-            </p>
-            <p className="font-mono text-sm tabular-nums text-slate-800">
-              {formatElapsed(elapsed)}
-            </p>
+            </span>
           </div>
-        </div>
-      </Card>
+          <p className="mt-1.5 font-mono text-sm tabular-nums text-ink-800">
+            {formatElapsed(elapsed)}
+          </p>
+        </Card>
+      </div>
 
       <Card title="Pipeline">
-        <ol className="space-y-3">
-          {run.steps.map((step) => (
+        <ol className="relative space-y-4 pl-1">
+          {run.steps.map((step, i) => (
             <li key={step.key} className="flex gap-3">
-              <div className="relative mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center">
-                {step.status === "active" && (
-                  <span className="absolute inline-flex h-5 w-5 animate-pulseRing rounded-full bg-brand-400" />
+              <div className="relative flex flex-col items-center">
+                <div className="relative flex h-6 w-6 shrink-0 items-center justify-center">
+                  {step.status === "active" && (
+                    <span className="absolute inline-flex h-6 w-6 animate-pulseRing rounded-full bg-iris-400" />
+                  )}
+                  <span
+                    className={[
+                      "relative flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold transition",
+                      step.status === "done"
+                        ? "bg-ink-900 text-white"
+                        : step.status === "active"
+                          ? "bg-iris-500 text-white"
+                          : "border border-ink-200 bg-white text-ink-300"
+                    ].join(" ")}
+                  >
+                    {step.status === "done" ? "✓" : i + 1}
+                  </span>
+                </div>
+                {i < run.steps.length - 1 && (
+                  <span
+                    className={`mt-1 w-px flex-1 ${
+                      step.status === "done" ? "bg-ink-900/70" : "bg-ink-200"
+                    }`}
+                  />
                 )}
-                <span
-                  className={[
-                    "relative flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold",
-                    step.status === "done"
-                      ? "bg-emerald-500 text-white"
-                      : step.status === "active"
-                        ? "bg-brand-600 text-white"
-                        : "bg-slate-200 text-slate-400"
-                  ].join(" ")}
-                >
-                  {step.status === "done" ? "✓" : ""}
-                </span>
               </div>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 pb-1">
                 <p
                   className={[
                     "text-sm font-semibold",
-                    step.status === "pending" ? "text-slate-400" : "text-slate-800"
+                    step.status === "pending" ? "text-ink-400" : "text-ink-900"
                   ].join(" ")}
                 >
                   {step.label}
                 </p>
-                <p className="text-xs text-slate-500">{step.detail}</p>
+                <p className="text-xs text-ink-400">{step.detail}</p>
               </div>
             </li>
           ))}
         </ol>
       </Card>
 
-      <Card title="Console">
-        <div
-          ref={logRef}
-          className="no-scrollbar h-36 overflow-y-auto rounded-xl bg-slate-900 p-3 font-mono text-[12px] leading-relaxed text-emerald-300"
-        >
-          {run.logs.length === 0 ? (
-            <p className="text-slate-500">waiting for agent...</p>
-          ) : (
-            run.logs.map((line, i) => (
-              <div key={i} className="animate-slideUp whitespace-pre-wrap">
-                {line}
-              </div>
-            ))
-          )}
+      <Card title="Console" icon={<Terminal size={13} />}>
+        <div className="overflow-hidden rounded-xl border border-ink-800 bg-ink-950">
+          <div className="flex items-center gap-1.5 border-b border-white/5 px-3 py-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-rose-400/80" />
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
+            <span className="ml-2 font-mono text-[11px] text-white/30">
+              cursor-agent · {run.branch || "sandbox"}
+            </span>
+          </div>
+          <div
+            ref={logRef}
+            className="no-scrollbar h-40 overflow-y-auto p-3 font-mono text-[12px] leading-relaxed"
+          >
+            {run.logs.length === 0 ? (
+              <p className="text-white/30">waiting for agent…</p>
+            ) : (
+              run.logs.map((line, i) => {
+                const last = i === run.logs.length - 1;
+                return (
+                  <div
+                    key={i}
+                    className="animate-fadeIn whitespace-pre-wrap text-emerald-300"
+                  >
+                    {line}
+                    {last && !isDone && (
+                      <span className="ml-0.5 inline-block h-3.5 w-1.5 -translate-y-px animate-caret bg-emerald-300 align-middle" />
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       </Card>
 
       {isDone && (
-        <Card title="Proposed diff">
-          <div className="mb-2 flex items-center gap-3 text-xs font-semibold">
-            <span className="text-emerald-600">+{totalAdditions}</span>
-            <span className="text-rose-600">-{totalDeletions}</span>
-            <span className="text-slate-400">
-              {run.diffFiles.length} files
-            </span>
+        <Card title="Proposed diff" icon={<FileDiff size={13} />}>
+          <div className="mb-3 flex items-center gap-3 text-xs font-semibold">
+            <span className="font-mono text-emerald-600">+{totalAdditions}</span>
+            <span className="font-mono text-rose-500">−{totalDeletions}</span>
+            <span className="text-ink-400">{run.diffFiles.length} files changed</span>
           </div>
           <ul className="space-y-1.5">
-            {run.diffFiles.map((f) => (
-              <li
-                key={f.path}
-                className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2"
-              >
-                <span className="truncate font-mono text-[12px] text-slate-700">
-                  {f.path}
-                </span>
-                <span className="shrink-0 font-mono text-[11px]">
-                  <span className="text-emerald-600">+{f.additions}</span>{" "}
-                  <span className="text-rose-600">-{f.deletions}</span>
-                </span>
-              </li>
-            ))}
+            {run.diffFiles.map((f) => {
+              const total = Math.max(1, f.additions + f.deletions);
+              return (
+                <li
+                  key={f.path}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-ink-200/70 bg-ink-50 px-3 py-2"
+                >
+                  <span className="truncate font-mono text-[12px] text-ink-700">
+                    {f.path}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="font-mono text-[11px] text-emerald-600">
+                      +{f.additions}
+                    </span>
+                    <span className="flex h-1.5 w-12 overflow-hidden rounded-full bg-rose-200">
+                      <span
+                        className="h-full bg-emerald-500"
+                        style={{ width: `${(f.additions / total) * 100}%` }}
+                      />
+                    </span>
+                    <span className="font-mono text-[11px] text-rose-500">
+                      −{f.deletions}
+                    </span>
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </Card>
       )}
 
       <BottomBar
-        primaryLabel={isDone ? "Review changes" : "Running..."}
+        primaryLabel={isDone ? "Review changes" : "Running…"}
+        primaryIcon={isDone ? <ArrowRight size={16} /> : undefined}
         onPrimary={() => router.push("/review")}
         primaryDisabled={!isDone}
         helper={
