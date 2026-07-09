@@ -16,9 +16,10 @@ Built for the CursorHack hackathon.
   affected area. "Load sample" prefills a realistic demo report.
 - **AI engineering brief** (`/brief`) - an editable, structured brief (title,
   summary, repro steps, approach, acceptance criteria, likely files, risk).
-- **Agent run status** (`/run`) - a live (mocked) Cursor agent pipeline with an
-  animated step timeline, elapsed timer, streamed console logs, and a proposed
-  diff.
+- **Agent run status** (`/run`) - dispatch the brief as a **real Cursor Cloud
+  Agent** on your repo (live status polling, real branch + PR), or run a fast
+  simulated pipeline for demos. Both share an animated step timeline, elapsed
+  timer, and streamed console.
 - **Review + safety checklist** (`/review`) - change summary, a gated safety
   checklist (required checks block merge), approve / request-changes, and a
   mock merge + PR link.
@@ -65,6 +66,7 @@ Recommended hackathon setup:
    Variables (set them for Preview and Production):
    - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `OPENAI_API_KEY`, `OPENAI_MODEL`
+   - `CURSOR_API_KEY` (+ optional `CURSOR_TARGET_REPO`, `CURSOR_TARGET_REF`)
 
 When validating UI from Cursor iOS, ask it explicitly to capture screenshots of
 the deployed Preview URL - deployment-specific issues are best verified there
@@ -138,8 +140,26 @@ To use a real model, set `OPENAI_API_KEY` (optionally `OPENAI_MODEL`, default
 to the template brief on any error or timeout. Add secrets in the Cloud Agents
 dashboard Secrets tab, not in this repo.
 
+## Real Cursor agent dispatch
+
+Set `CURSOR_API_KEY` (a Cursor user API key from Dashboard -> Integrations ->
+API Keys) to unlock the **Dispatch real agent** button on the brief screen. The
+server-only routes:
+
+- `POST /api/agent/launch` - builds a scoped prompt from the brief and calls
+  `POST /v1/agents` on `CURSOR_TARGET_REPO` (default `Cashubski/CursorHack`,
+  branch `CURSOR_TARGET_REF`, default `main`) with `autoCreatePR: true`.
+- `GET /api/agent/status` - polls `GET /v1/agents/{id}/runs/{runId}`, maps the
+  Cursor run status onto the pipeline, and surfaces the real branch + PR URL.
+
+Both routes are same-origin only and rate limited, and the key never reaches the
+browser. When no key is configured the button is hidden and the app runs the
+simulation instead. Add the key in the Cloud Agents dashboard Secrets tab (or
+Vercel Project Settings), not in this repo.
+
 ## Notes
 
-The agent run is intentionally mocked (`lib/mockAgent.ts`) to keep the demo fast
-and self-contained, per the v1 goal of prioritising demo clarity over
-completeness.
+For demos, the **Simulated run** path (`lib/mockAgent.ts`) is fast and fully
+self-contained, so a live presentation never blocks on a multi-minute real agent
+run or network. The real dispatch path proves the end-to-end integration; keep
+both available and choose per situation.

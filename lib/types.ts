@@ -47,13 +47,17 @@ export type AgentRunStatus =
   | "idle"
   | "running"
   | "awaiting-review"
-  | "merged";
+  | "merged"
+  | "failed";
 
 export interface DiffFile {
   path: string;
   additions: number;
   deletions: number;
 }
+
+/** How the run was executed: a fast local simulation, or a real Cursor agent. */
+export type AgentRunMode = "mock" | "real";
 
 export interface AgentRun {
   status: AgentRunStatus;
@@ -63,6 +67,17 @@ export interface AgentRun {
   branch: string;
   prUrl: string;
   startedAt: number | null;
+  /** Defaults to "mock". "real" runs are dispatched to the Cursor Agents API. */
+  mode: AgentRunMode;
+  /** Cursor Cloud Agent identifiers (real mode only). */
+  agentId?: string;
+  agentRunId?: string;
+  /** Deep link to the agent on cursor.com (real mode only). */
+  agentUrl?: string;
+  /** Raw Cursor run status for display, e.g. "RUNNING" (real mode only). */
+  agentStatus?: string;
+  /** Populated when a real run ends in ERROR/CANCELLED/EXPIRED. */
+  error?: string;
 }
 
 export interface SafetyCheckItem {

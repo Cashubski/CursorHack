@@ -11,7 +11,8 @@ import {
   ThumbsDown,
   ThumbsUp,
   ExternalLink,
-  Plus
+  Plus,
+  Cpu
 } from "lucide-react";
 import { usePatchPilot } from "@/lib/store";
 import Card from "@/components/Card";
@@ -38,6 +39,8 @@ export default function ReviewPage() {
 
   const totalAdditions = run.diffFiles.reduce((a, f) => a + f.additions, 0);
   const totalDeletions = run.diffFiles.reduce((a, f) => a + f.deletions, 0);
+  const hasDiff = run.diffFiles.length > 0;
+  const isReal = run.mode === "real";
 
   function startOver() {
     reset();
@@ -125,34 +128,56 @@ export default function ReviewPage() {
       <Card title="Change summary" icon={<GitPullRequest size={13} />}>
         <p className="text-[15px] font-semibold text-ink-900">{brief.title}</p>
         <div className="mt-2 flex items-center gap-3 text-xs font-semibold">
-          <span className="font-mono text-emerald-600">+{totalAdditions}</span>
-          <span className="font-mono text-rose-500">−{totalDeletions}</span>
-          <span className="text-ink-400">{run.diffFiles.length} files</span>
-          <a
-            href={run.prUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-auto inline-flex items-center gap-1 font-semibold text-iris-600 hover:text-iris-700"
-          >
-            PR <ExternalLink size={12} />
-          </a>
-        </div>
-        <ul className="mt-3 space-y-1.5">
-          {run.diffFiles.map((f) => (
-            <li
-              key={f.path}
-              className="flex items-center justify-between gap-2 rounded-lg border border-ink-200/70 bg-ink-50 px-3 py-2"
+          {hasDiff ? (
+            <>
+              <span className="font-mono text-emerald-600">+{totalAdditions}</span>
+              <span className="font-mono text-rose-500">−{totalDeletions}</span>
+              <span className="text-ink-400">{run.diffFiles.length} files</span>
+            </>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-ink-500">
+              {isReal && <Cpu size={12} className="text-iris-500" />}
+              {run.branch ? (
+                <span className="font-mono text-ink-700">{run.branch}</span>
+              ) : (
+                "Dispatched to Cursor agent"
+              )}
+            </span>
+          )}
+          {run.prUrl && (
+            <a
+              href={run.prUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-auto inline-flex items-center gap-1 font-semibold text-iris-600 hover:text-iris-700"
             >
-              <span className="truncate font-mono text-[12px] text-ink-700">
-                {f.path}
-              </span>
-              <span className="shrink-0 font-mono text-[11px]">
-                <span className="text-emerald-600">+{f.additions}</span>{" "}
-                <span className="text-rose-500">−{f.deletions}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
+              PR <ExternalLink size={12} />
+            </a>
+          )}
+        </div>
+        {hasDiff ? (
+          <ul className="mt-3 space-y-1.5">
+            {run.diffFiles.map((f) => (
+              <li
+                key={f.path}
+                className="flex items-center justify-between gap-2 rounded-lg border border-ink-200/70 bg-ink-50 px-3 py-2"
+              >
+                <span className="truncate font-mono text-[12px] text-ink-700">
+                  {f.path}
+                </span>
+                <span className="shrink-0 font-mono text-[11px]">
+                  <span className="text-emerald-600">+{f.additions}</span>{" "}
+                  <span className="text-rose-500">−{f.deletions}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 rounded-lg border border-ink-200/70 bg-ink-50 px-3 py-2.5 text-xs text-ink-500">
+            This patch was produced by a live Cursor agent. Open the pull request to
+            review the full file-level diff before approving.
+          </p>
+        )}
       </Card>
 
       <Card

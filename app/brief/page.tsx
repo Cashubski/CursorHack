@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { RefreshCw, Rocket, FileCode2 } from "lucide-react";
+import { RefreshCw, Rocket, FileCode2, Play, Loader2, ArrowLeft } from "lucide-react";
 import { usePatchPilot } from "@/lib/store";
 import type { EngineeringBrief, RiskLevel } from "@/lib/types";
 import Card from "@/components/Card";
 import Badge from "@/components/Badge";
-import BottomBar from "@/components/BottomBar";
 
 const RISK_TONE: Record<RiskLevel, "green" | "amber" | "red"> = {
   low: "green",
@@ -41,10 +40,27 @@ export default function BriefPage() {
   const router = useRouter();
   const { issue, brief, updateBrief, setBrief } = usePatchPilot();
   const [regenerating, setRegenerating] = useState(false);
+  const [dispatching, setDispatching] = useState<"none" | "demo" | "real">("none");
+  const [realAvailable, setRealAvailable] = useState(false);
+  const [dispatchError, setDispatchError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!brief) router.replace("/intake");
   }, [brief, router]);
+
+  // Ask the server whether a real Cursor agent can be dispatched.
+  useEffect(() => {
+    let active = true;
+    fetch("/api/agent/launch")
+      .then((r) => r.json())
+      .then((d) => {
+        if (active) setRealAvailable(Boolean(d?.configured));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   if (!brief) return null;
 
@@ -65,9 +81,42 @@ export default function BriefPage() {
     }
   }
 
-  async function dispatch() {
+  async function dispatchDemo() {
+    setDispatching("demo");
     await usePatchPilot.getState().persist("running");
     router.push("/run");
+  }
+
+  async function dispatchReal() {
+    if (!brief) return;
+    setDispatching("real");
+    setDispatchError(null);
+    try {
+      const res = await fetch("/api/agent/launch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brief, issue })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.agentId) {
+        setDispatchError(
+          data?.error || "Could not reach the Cursor agent. Try the simulated run."
+        );
+        setDispatching("none");
+        return;
+      }
+      usePatchPilot.getState().startRealRun({
+        agentId: data.agentId,
+        agentRunId: data.runId,
+        agentUrl: data.url,
+        branch: data.branch
+      });
+      await usePatchPilot.getState().persist("running");
+      router.push("/run");
+    } catch {
+      setDispatchError("Network error contacting the agent. Try the simulated run.");
+      setDispatching("none");
+    }
   }
 
   return (
@@ -182,14 +231,58 @@ export default function BriefPage() {
         </div>
       </Card>
 
-      <BottomBar
-        primaryLabel="Dispatch to agent"
-        primaryIcon={<Rocket size={16} />}
-        onPrimary={dispatch}
-        secondaryLabel="Back"
-        onSecondary={() => router.push("/intake")}
-        helper="Sends this brief to the Cursor agent workflow"
-      />
+      <div className="mt-6 space-y-3 border-t border-ink-200/70 pt-4">
+        {dispatchError && (
+          <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-600">
+            {dispatchError}
+          </p>
+        )}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <p className="order-2 text-xs text-ink-400 sm:order-1">
+            {realAvailable
+              ? "Dispatch a live Cursor agent, or run a fast simulation for demos."
+              : "Runs a simulated agent pipeline against this brief."}
+          </p>
+          <div className="order-1 flex flex-col gap-2 sm:order-2 sm:ml-auto sm:flex-row">
+            <button
+              type="button"
+              onClick={() => router.push("/intake")}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-ink-200 bg-white px-4 py-2.5 text-sm font-semibold text-ink-600 transition hover:bg-ink-50"
+            >
+              <ArrowLeft size={15} />
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={dispatchDemo}
+              disabled={dispatching !== "none"}
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-ink-200 bg-white px-4 py-2.5 text-sm font-semibold text-ink-700 transition hover:bg-ink-50 disabled:opacity-50"
+            >
+              {dispatching === "demo" ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <Play size={15} />
+              )}
+              Simulated run
+            </button>
+            {realAvailable && (
+              <button
+                type="button"
+                onClick={dispatchReal}
+                disabled={dispatching !== "none"}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-iris-500 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_6px_16px_-6px_rgba(108,94,245,0.6)] transition hover:bg-iris-600 disabled:opacity-60"
+              >
+                {dispatching === "real" ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Rocket size={16} />
+                )}
+                Dispatch real agent
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

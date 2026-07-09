@@ -67,7 +67,8 @@ function freshRun(): AgentRun {
     diffFiles: [],
     branch: "",
     prUrl: "",
-    startedAt: null
+    startedAt: null,
+    mode: "mock"
   };
 }
 
@@ -94,6 +95,18 @@ interface PatchPilotState {
   updateBrief: (patch: Partial<EngineeringBrief>) => void;
 
   startRun: () => void;
+  startRealRun: (info: {
+    agentId: string;
+    agentRunId: string;
+    agentUrl: string;
+    branch?: string;
+  }) => void;
+  applyRealStatus: (patch: {
+    agentStatus: string;
+    branch?: string;
+    prUrl?: string;
+  }) => void;
+  failRun: (message: string) => void;
   appendLogs: (lines: string[]) => void;
   setStepStatus: (index: number, status: AgentRun["steps"][number]["status"]) => void;
   completeRun: () => void;
@@ -150,6 +163,51 @@ export const usePatchPilot = create<PatchPilotState>((set, get) => ({
       }
     }));
   },
+
+  startRealRun: (info) => {
+    const { brief } = get();
+    if (!brief) return;
+    set(() => ({
+      status: "running",
+      run: {
+        ...freshRun(),
+        status: "running",
+        mode: "real",
+        agentId: info.agentId,
+        agentRunId: info.agentRunId,
+        agentUrl: info.agentUrl,
+        agentStatus: "CREATING",
+        branch: info.branch ?? "",
+        prUrl: "",
+        startedAt: Date.now(),
+        logs: [
+          "> dispatched to Cursor Cloud Agent",
+          `> agent ${info.agentId}`,
+          "> status: CREATING"
+        ]
+      }
+    }));
+  },
+
+  applyRealStatus: (patch) =>
+    set((s) => ({
+      run: {
+        ...s.run,
+        agentStatus: patch.agentStatus,
+        branch: patch.branch || s.run.branch,
+        prUrl: patch.prUrl || s.run.prUrl
+      }
+    })),
+
+  failRun: (message) =>
+    set((s) => ({
+      run: {
+        ...s.run,
+        status: "failed",
+        error: message,
+        logs: [...s.run.logs, `> error: ${message}`]
+      }
+    })),
 
   appendLogs: (lines) =>
     set((s) => ({ run: { ...s.run, logs: [...s.run.logs, ...lines] } })),

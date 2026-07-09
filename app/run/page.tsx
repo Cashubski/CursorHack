@@ -2,7 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { GitBranch, Timer, Terminal, FileDiff, ArrowRight } from "lucide-react";
+import {
+  GitBranch,
+  Timer,
+  Terminal,
+  FileDiff,
+  ArrowRight,
+  GitPullRequest,
+  ExternalLink,
+  AlertTriangle,
+  Cpu
+} from "lucide-react";
 import { usePatchPilot } from "@/lib/store";
 import { stepLogLines } from "@/lib/mockAgent";
 import Card from "@/components/Card";
@@ -18,6 +28,39 @@ function formatElapsed(ms: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+// Coarse, honest phases for a real agent run (we don't fake sub-progress).
+const REAL_STEPS = [
+  {
+    key: "provision",
+    label: "Provisioning",
+    detail: "Cloud sandbox spun up and repository checked out."
+  },
+  {
+    key: "working",
+    label: "Agent working",
+    detail: "Reading the brief, editing code, and running tests."
+  },
+  {
+    key: "pr",
+    label: "Pull request",
+    detail: "Pushing a branch and opening a PR for review."
+  }
+];
+
+type StepStatus = "pending" | "active" | "done";
+
+function realStepStatus(
+  index: number,
+  agentStatus: string | undefined,
+  isDone: boolean
+): StepStatus {
+  if (isDone) return "done";
+  if (agentStatus === "CREATING") return index === 0 ? "active" : "pending";
+  if (agentStatus === "RUNNING")
+    return index === 0 ? "done" : index === 1 ? "active" : "pending";
+  return index < 2 ? "done" : "active";
+}
+
 export default function RunPage() {
   const router = useRouter();
   const brief = usePatchPilot((s) => s.brief);
@@ -26,17 +69,20 @@ export default function RunPage() {
   const logRef = useRef<HTMLDivElement>(null);
   const started = useRef(false);
 
+  const isReal = run.mode === "real";
+
   useEffect(() => {
     if (!brief) {
       router.replace("/intake");
     }
   }, [brief, router]);
 
-  // Drive the mocked agent pipeline once per visit.
+  // Drive the mocked agent pipeline once per visit (simulated runs only).
   useEffect(() => {
     if (started.current) return;
     const store = usePatchPilot.getState();
     if (!store.brief) return;
+    if (store.run.mode === "real") return;
     if (store.run.status !== "idle") return;
     started.current = true;
 
@@ -74,6 +120,70 @@ export default function RunPage() {
     };
   }, []);
 
+  // Poll the real Cursor agent run and stream its status into the console.
+  useEffect(() => {
+    if (run.mode !== "real" || run.status !== "running") return;
+    const agentId = run.agentId;
+    const runId = run.agentRunId;
+    if (!agentId || !runId) return;
+
+    let cancelled = false;
+    let lastStatus = usePatchPilot.getState().run.agentStatus ?? "";
+
+    const poll = async () => {
+      try {
+        const res = await fetch(
+          `/api/agent/status?agentId=${encodeURIComponent(
+            agentId
+          )}&runId=${encodeURIComponent(runId)}`
+        );
+        if (cancelled) return;
+        const data = await res.json();
+        if (!res.ok) return; // transient; keep polling
+
+        const store = usePatchPilot.getState();
+        if (data.status && data.status !== lastStatus) {
+          lastStatus = data.status;
+          store.appendLogs([`> status: ${data.status}`]);
+        }
+        if (data.branch && data.branch !== store.run.branch) {
+          store.appendLogs([`> branch: ${data.branch}`]);
+        }
+        if (data.prUrl && !store.run.prUrl) {
+          store.appendLogs(["> pull request opened"]);
+        }
+        store.applyRealStatus({
+          agentStatus: data.status,
+          branch: data.branch,
+          prUrl: data.prUrl
+        });
+
+        if (data.phase === "awaiting-review") {
+          if (data.text) store.appendLogs([`> ${String(data.text).slice(0, 240)}`]);
+          store.appendLogs(["> done - awaiting human review"]);
+          store.completeRun();
+          await store.persist("review");
+          cancelled = true;
+        } else if (data.phase === "failed") {
+          store.failRun(data.label || "Agent run failed");
+          await store.persist();
+          cancelled = true;
+        }
+      } catch {
+        // network blip — keep polling
+      }
+    };
+
+    poll();
+    const id = setInterval(() => {
+      if (!cancelled) poll();
+    }, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [run.mode, run.status, run.agentId, run.agentRunId]);
+
   useEffect(() => {
     if (run.status !== "running" || !run.startedAt) return;
     const id = setInterval(() => {
@@ -90,22 +200,41 @@ export default function RunPage() {
 
   if (!brief) return null;
 
+  const failed = run.status === "failed";
   const isDone = run.status === "awaiting-review" || run.status === "merged";
   const totalAdditions = run.diffFiles.reduce((a, f) => a + f.additions, 0);
   const totalDeletions = run.diffFiles.reduce((a, f) => a + f.deletions, 0);
+
+  const displaySteps: { key: string; label: string; detail: string; status: StepStatus }[] =
+    isReal
+      ? REAL_STEPS.map((st, i) => ({
+          ...st,
+          status: realStepStatus(i, run.agentStatus, isDone)
+        }))
+      : run.steps.map((st) => ({
+          key: st.key,
+          label: st.label,
+          detail: st.detail,
+          status: st.status
+        }));
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div className="flex animate-slideUp items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="eyebrow">Step 3 · Run</p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-ink-900">
+          <h2 className="mt-1 flex items-center gap-2 text-2xl font-semibold tracking-tight text-ink-900">
             Agent run
+            {isReal && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-iris-50 px-2 py-0.5 text-[11px] font-semibold text-iris-700 ring-1 ring-inset ring-iris-100">
+                <Cpu size={11} /> live
+              </span>
+            )}
           </h2>
           <p className="mt-1 truncate text-sm text-ink-500">{brief.title}</p>
         </div>
-        <Badge tone={isDone ? "green" : "amber"}>
-          {isDone ? "complete" : "running"}
+        <Badge tone={failed ? "red" : isDone ? "green" : "amber"}>
+          {failed ? "failed" : isDone ? "complete" : "running"}
         </Badge>
       </div>
 
@@ -118,7 +247,7 @@ export default function RunPage() {
             </span>
           </div>
           <p className="mt-1.5 truncate font-mono text-sm text-ink-800">
-            {run.branch || "…"}
+            {run.branch || (isReal ? "pending…" : "…")}
           </p>
         </Card>
         <Card>
@@ -134,9 +263,23 @@ export default function RunPage() {
         </Card>
       </div>
 
-      <Card title="Pipeline">
+      <Card
+        title="Pipeline"
+        action={
+          isReal && run.agentUrl ? (
+            <a
+              href={run.agentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-iris-600 hover:text-iris-700"
+            >
+              Open in Cursor <ExternalLink size={12} />
+            </a>
+          ) : undefined
+        }
+      >
         <ol className="relative space-y-4 pl-1">
-          {run.steps.map((step, i) => (
+          {displaySteps.map((step, i) => (
             <li key={step.key} className="flex gap-3">
               <div className="relative flex flex-col items-center">
                 <div className="relative flex h-6 w-6 shrink-0 items-center justify-center">
@@ -156,7 +299,7 @@ export default function RunPage() {
                     {step.status === "done" ? "✓" : i + 1}
                   </span>
                 </div>
-                {i < run.steps.length - 1 && (
+                {i < displaySteps.length - 1 && (
                   <span
                     className={`mt-1 w-px flex-1 ${
                       step.status === "done" ? "bg-ink-900/70" : "bg-ink-200"
@@ -202,10 +345,12 @@ export default function RunPage() {
                 return (
                   <div
                     key={i}
-                    className="animate-fadeIn whitespace-pre-wrap text-emerald-300"
+                    className={`animate-fadeIn whitespace-pre-wrap ${
+                      failed && last ? "text-rose-300" : "text-emerald-300"
+                    }`}
                   >
                     {line}
-                    {last && !isDone && (
+                    {last && !isDone && !failed && (
                       <span className="ml-0.5 inline-block h-3.5 w-1.5 -translate-y-px animate-caret bg-emerald-300 align-middle" />
                     )}
                   </div>
@@ -216,7 +361,59 @@ export default function RunPage() {
         </div>
       </Card>
 
-      {isDone && (
+      {failed && (
+        <Card title="Run failed" icon={<AlertTriangle size={13} />}>
+          <p className="text-sm text-ink-600">
+            {run.error || "The agent run did not complete."}
+          </p>
+          {run.agentUrl && (
+            <a
+              href={run.agentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-iris-600 hover:text-iris-700"
+            >
+              Inspect on Cursor <ExternalLink size={14} />
+            </a>
+          )}
+        </Card>
+      )}
+
+      {isReal && !failed && (isDone || run.branch || run.prUrl) && (
+        <Card title="Result" icon={<GitPullRequest size={13} />}>
+          <dl className="space-y-2 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-ink-400">Branch</dt>
+              <dd className="truncate font-mono text-ink-800">
+                {run.branch || "pending…"}
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-ink-400">Pull request</dt>
+              <dd>
+                {run.prUrl ? (
+                  <a
+                    href={run.prUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 font-semibold text-iris-600 hover:text-iris-700"
+                  >
+                    View PR <ExternalLink size={12} />
+                  </a>
+                ) : (
+                  <span className="text-ink-400">opening…</span>
+                )}
+              </dd>
+            </div>
+          </dl>
+          <p className="mt-3 text-xs text-ink-400">
+            Full file-level diff lives on the pull request — open it to review every
+            change.
+          </p>
+        </Card>
+      )}
+
+      {isDone && !isReal && (
         <Card title="Proposed diff" icon={<FileDiff size={13} />}>
           <div className="mb-3 flex items-center gap-3 text-xs font-semibold">
             <span className="font-mono text-emerald-600">+{totalAdditions}</span>
@@ -256,14 +453,22 @@ export default function RunPage() {
       )}
 
       <BottomBar
-        primaryLabel={isDone ? "Review changes" : "Running…"}
+        primaryLabel={
+          isDone ? "Review changes" : failed ? "Back to brief" : "Running…"
+        }
         primaryIcon={isDone ? <ArrowRight size={16} /> : undefined}
-        onPrimary={() => router.push("/review")}
-        primaryDisabled={!isDone}
+        onPrimary={() =>
+          failed ? router.push("/brief") : router.push("/review")
+        }
+        primaryDisabled={!isDone && !failed}
         helper={
           isDone
             ? undefined
-            : "The agent is working. Review unlocks when it finishes."
+            : failed
+              ? "The run didn't finish — adjust the brief and try again."
+              : isReal
+                ? "Live agent is working. Review unlocks when the PR is ready."
+                : "The agent is working. Review unlocks when it finishes."
         }
       />
     </div>
