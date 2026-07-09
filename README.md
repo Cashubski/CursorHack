@@ -46,6 +46,30 @@ npm run build
 npm run start
 ```
 
+## Deploy to Vercel
+
+This is a standard Next.js App Router app, so Vercel auto-detects the framework
+and build settings. It deploys with **no required environment variables** - if
+Supabase/OpenAI keys are absent it degrades to `localStorage` and the offline
+template brief, so Preview URLs work immediately.
+
+Recommended hackathon setup:
+
+1. Import the GitHub repo into Vercel (connect Vercel before the event so
+   deployments are ready instantly).
+2. Enable **Preview Deployments** so every branch and PR gets its own shareable
+   URL for parallel review.
+3. Disable **Preview Deployment Authentication** (or configure an automation
+   bypass) so teammates and AI agents can open Preview URLs without signing in.
+4. Optionally add the env vars below in Project Settings -> Environment
+   Variables (set them for Preview and Production):
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `OPENAI_API_KEY`, `OPENAI_MODEL`
+
+When validating UI from Cursor iOS, ask it explicitly to capture screenshots of
+the deployed Preview URL - deployment-specific issues are best verified there
+rather than only against a local dev server.
+
 ## Supabase setup
 
 The app works out of the box using `localStorage`. To enable shared, persistent
