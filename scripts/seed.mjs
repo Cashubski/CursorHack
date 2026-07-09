@@ -99,7 +99,7 @@ const rows = [
         { path: "src/sync/__tests__/conflictResolver.test.ts", additions: 34, deletions: 0 }
       ]),
       branch: "patchpilot/notes-silently-dropped-after-offli",
-      prUrl: "https://github.com/acme/app/pull/1427",
+      prUrl: "https://github.com/Cashubski/CursorHack/pull/1",
       startedAt: now - 240 * 60000
     },
     review: {
@@ -158,7 +158,7 @@ const rows = [
         { path: "src/payments/__tests__/checkout.test.ts", additions: 41, deletions: 0 }
       ]),
       branch: "patchpilot/checkout-hangs-on-payment-confirm",
-      prUrl: "https://github.com/acme/app/pull/1431",
+      prUrl: "https://github.com/Cashubski/CursorHack/pull/1",
       startedAt: now - 60 * 60000
     },
     review: null

@@ -103,6 +103,20 @@ The script (`scripts/seed.mjs`) is safe to re-run - it clears its own prior
 rows (reporter prefixed `demo:`) before inserting a fresh set spanning the
 briefed / running / review / merged states.
 
+## Realtime board
+
+The dashboard subscribes to task changes so it updates live with no refresh
+(open it in two windows and create a report in one). With Supabase this uses
+Postgres change streams; without it, it syncs across browser tabs via
+`localStorage` events.
+
+To enable Supabase Realtime, ensure the `tasks` table is in the realtime
+publication (included in `supabase/schema.sql`):
+
+```sql
+alter publication supabase_realtime add table public.tasks;
+```
+
 ## Local environment
 
 For local development against Supabase, create `.env.local` (gitignored):

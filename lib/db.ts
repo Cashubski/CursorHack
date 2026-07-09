@@ -137,3 +137,35 @@ export function newTaskId(): string {
   }
   return `t_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
+
+/**
+ * Subscribe to task changes for a live board. With Supabase this uses Postgres
+ * change streams (Realtime); without it, it listens for cross-tab localStorage
+ * writes. Returns an unsubscribe function. `onChange` fires on any change.
+ */
+export function subscribeTasks(onChange: () => void): () => void {
+  const supabase = getSupabase();
+  if (supabase) {
+    const channel = supabase
+      .channel("public:tasks")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: TASKS_TABLE },
+        () => onChange()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }
+
+  if (typeof window !== "undefined") {
+    const handler = (e: StorageEvent) => {
+      if (e.key === LS_KEY) onChange();
+    };
+    window.addEventListener("storage", handler);
+    return () => window.removeEventListener("storage", handler);
+  }
+
+  return () => {};
+}

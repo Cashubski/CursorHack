@@ -13,7 +13,7 @@ import {
   Plus,
   ShieldCheck
 } from "lucide-react";
-import { listTasks, storageMode } from "@/lib/db";
+import { listTasks, storageMode, subscribeTasks } from "@/lib/db";
 import { usePatchPilot } from "@/lib/store";
 import type { Severity, Task, TaskStatus } from "@/lib/types";
 import Badge from "@/components/Badge";
@@ -105,6 +105,13 @@ export default function Dashboard() {
 
   useEffect(() => {
     load();
+    const unsubscribe = subscribeTasks(load);
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      unsubscribe();
+      window.removeEventListener("focus", onFocus);
+    };
   }, [load]);
 
   function openTask(task: Task) {
@@ -204,9 +211,17 @@ export default function Dashboard() {
               Recent tasks
             </h2>
           </div>
-          {storageMode === "local" && (
+          {storageMode === "supabase" ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              </span>
+              Live
+            </span>
+          ) : (
             <span className="hidden text-xs text-ink-400 sm:block">
-              Local storage — add Supabase env vars to sync
+              Local — updates sync across tabs
             </span>
           )}
         </div>

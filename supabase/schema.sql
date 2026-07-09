@@ -54,3 +54,6 @@ create policy "tasks_anon_update" on public.tasks
 drop policy if exists "tasks_anon_delete" on public.tasks;
 create policy "tasks_anon_delete" on public.tasks
   for delete using (true);
+
+-- Realtime: stream row changes to subscribed clients so the board updates live.
+alter publication supabase_realtime add table public.tasks;

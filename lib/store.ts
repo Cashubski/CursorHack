@@ -145,7 +145,7 @@ export const usePatchPilot = create<PatchPilotState>((set, get) => ({
         status: "running",
         branch: buildBranchName(brief),
         diffFiles: buildDiffFiles(brief),
-        prUrl: `https://github.com/acme/app/pull/${1400 + Math.floor(Math.random() * 90)}`,
+        prUrl: "https://github.com/Cashubski/CursorHack/pull/1",
         startedAt: Date.now()
       }
     }));
