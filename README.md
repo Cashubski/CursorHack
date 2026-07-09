@@ -90,6 +90,30 @@ storage:
 The header shows a "Supabase" / "Local" indicator so you always know which
 backend is active.
 
+## Seed demo data
+
+To populate the board with a few realistic tasks (great for a demo):
+
+```bash
+# with Supabase env vars set (or in .env.local)
+npm run seed
+```
+
+The script (`scripts/seed.mjs`) is safe to re-run - it clears its own prior
+rows (reporter prefixed `demo:`) before inserting a fresh set spanning the
+briefed / running / review / merged states.
+
+## Local environment
+
+For local development against Supabase, create `.env.local` (gitignored):
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon or publishable key>
+# optional
+OPENAI_API_KEY=<key>
+```
+
 ## AI brief generation
 
 By default the brief is produced by a deterministic, offline template
